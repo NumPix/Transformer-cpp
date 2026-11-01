@@ -1,19 +1,10 @@
 #include "Tensor.hpp"
 #include <iostream>
+#include <iomanip>
 
 int main(int argc, char** argv) {
-    auto T = Tensor<2, 3>({
-        {1, 2, 3},
-        {4, 5, 6}
-    });
-
-    for (std::size_t i = 0; i < 2; ++i) {
-        for (std::size_t j = 0; j < 3; ++j) {
-            std::cout << T[i, j] << " ";
-        }
-
-        std::cout << std::endl;
-    }
+    auto T = Tensor<float, 1, 2, 3>::full(2);
+    std::cout << std::scientific << std::setprecision(8) << T;
 
     return 0;
 }
