@@ -55,6 +55,16 @@ public:
 private:
     std::unique_ptr<T[]> values = std::make_unique<T[]>(size);
 
+    bool empty() const noexcept {
+        return !values;
+    }
+
+    void emptyAccessCheck() {
+        if (empty()) {
+            throw std::logic_error("can't access empty Tensor");
+        }
+    }
+
     static std::size_t calculateOffset(decltype(Dimensions)... indices) {
         const std::array<std::size_t, rank> indicesArray = { indices... };
 
@@ -76,10 +86,10 @@ private:
         return offset;
     }
 
-    static const std::size_t PRINT_SUMMARY_THRESHOLD = 1000;
-    static const std::size_t PRINT_SUMMARY_EDGEITEMS = 3;
-    static const std::size_t PRINT_DEFAULT_PRECISION = 6;
-    static const bool SUPPRESS_SCIENTIFIC = false;
+    static constexpr std::size_t PRINT_SUMMARY_THRESHOLD = 1000;
+    static constexpr std::size_t PRINT_SUMMARY_EDGEITEMS = 3;
+    static constexpr std::size_t PRINT_DEFAULT_PRECISION = 6;
+    static constexpr bool SUPPRESS_SCIENTIFIC = false;
 
     static std::string formatElement(T value, bool useScientific, std::size_t precision, bool trim) {
         if (std::isnan(value)) {
@@ -105,7 +115,12 @@ private:
         return valueStr;
     }
 
-    void getPrintElementWidths(bool useScientific, std::size_t precision, bool trim, std::size_t& integerWidth, std::size_t& fractionWidth, std::size_t& mantissaWidth, std::size_t& exponentWidth) const {
+    void getPrintElementWidths(bool useScientific, std::size_t precision, bool trim, 
+        std::size_t& integerWidth, 
+        std::size_t& fractionWidth, 
+        std::size_t& mantissaWidth, 
+        std::size_t& exponentWidth) const {
+
         integerWidth = 0;
         fractionWidth = 0;
         mantissaWidth = 0;
@@ -258,24 +273,35 @@ private:
     }
 
 public:
-    constexpr Tensor() = default;
+    Tensor() = default;
 
-    constexpr Tensor(const nested_array_t<T, Dimensions...>& rawValues) {
+    Tensor(const nested_array_t<T, Dimensions...>& rawValues) {
         T* out = values.get();
         flatten(rawValues, out);
     }
 
-    Tensor(const Tensor& other) : values(std::make_unique_for_overwrite<T[]>(size)) {
-        std::copy_n(other.values.get(), size, values.get());
+    Tensor(const Tensor& other) : values(other.empty() ? nullptr : std::make_unique_for_overwrite<T[]>(size)) {
+        if (!other.empty()) {
+            std::copy_n(other.values.get(), size, values.get());
+        }
     }
 
     Tensor& operator=(const Tensor& other) {
-        if (this != &other) {
-            if (!values) {
-                values = std::make_unique_for_overwrite<T[]>(size);
-            }
-            std::copy_n(other.values.get(), size, values.get());
+        if (this == &other) {
+            return *this;
         }
+
+        if (other.empty()) {
+            values.reset();
+
+            return *this;
+        }
+
+        if (empty()) {
+            values = std::make_unique_for_overwrite<T[]>(size);
+        }
+
+        std::copy_n(other.values.get(), size, values.get());
 
         return *this;
     }
@@ -283,7 +309,7 @@ public:
     Tensor(Tensor&&) noexcept = default;
     Tensor& operator=(Tensor&&) noexcept = default;
 
-    static constexpr Tensor full(T value) {
+    static Tensor full(T value) {
         Tensor tensor{};
 
         std::fill_n(tensor.values.get(), size, value);
@@ -291,21 +317,25 @@ public:
         return tensor;
     }
 
-    static constexpr Tensor ones() {
+    static Tensor ones() {
         return full(1.0);
     }
 
-    static constexpr Tensor zeroes() {
+    static Tensor zeroes() {
         return full(0.0);
     }
 
     T& operator[](decltype(Dimensions)... indices) {
+        emptyAccessCheck();
+
         std::size_t offset = calculateOffset(indices...);
 
         return values[offset];
     }
 
     const T& operator[](decltype(Dimensions)... indices) const {
+        emptyAccessCheck();
+
         std::size_t offset = calculateOffset(indices...);
 
         return values[offset];
@@ -322,14 +352,21 @@ public:
             os << tensor.shape[i];
         }
 
-        os << ">\n";
+        os << ">";
 
-        tensor.print(os);
+        if (tensor.empty()) {
+            os << " (empty)";
+        } else {
+            os << "\n";
+            tensor.print(os);
+        }
 
         return os;
     }
 
     T max() const {
+        emptyAccessCheck();
+
         T maxValue = -std::numeric_limits<T>::infinity();
 
         for (std::size_t i = 0; i < size; ++i) {
@@ -340,6 +377,8 @@ public:
     }
 
     T min() const {
+        emptyAccessCheck();
+
         T minValue = std::numeric_limits<T>::infinity();
 
         for (std::size_t i = 0; i < size; ++i) {
