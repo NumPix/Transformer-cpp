@@ -59,7 +59,7 @@ private:
         return !values;
     }
 
-    void emptyAccessCheck() {
+    void emptyAccessCheck() const {
         if (empty()) {
             throw std::logic_error("can't access empty Tensor");
         }
