@@ -5,12 +5,26 @@
 
 #include <cmath>
 #include <string>
+#include <string_view>
 #include <iomanip>
 #include <ios>
 #include <ostream>
 #include <sstream>
 
 namespace tensor::detail {
+
+template<std::floating_point T>
+constexpr std::string_view typeName() {
+    if constexpr (std::same_as<T, float>) {
+        return "float";
+    } else if constexpr (std::same_as<T, double>) {
+        return "double";
+    } else if constexpr (std::same_as<T, long double>) {
+        return "long double";
+    } else {
+        return "unknown";
+    }
+};
 
 inline constexpr std::size_t printSummaryThreshold = 1000;
 inline constexpr std::size_t printSummaryEdgeItems = 3;
@@ -202,14 +216,10 @@ template<std::floating_point T, std::size_t... Dimensions>
 std::ostream& operator<<(std::ostream& os, const Tensor<T, Dimensions...>& tensor) {
     using TensorType = Tensor<T, Dimensions...>;
 
-    os << "Tensor<";
+    os << "Tensor<" << detail::typeName<T>();
 
     for (std::size_t i = 0; i < TensorType::rank; ++i) {
-        if (i > 0) {
-            os << ", ";
-        }
-
-        os << TensorType::shape[i];
+        os << ", " << TensorType::shape[i];
     }
 
     os << ">";
