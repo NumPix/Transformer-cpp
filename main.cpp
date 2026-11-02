@@ -1,5 +1,5 @@
-#include "tensor/tensor.hpp"
-#include "tensor/tensor_io.hpp"
+#include "tensor/tensor"
+#include "tensor/tensor_io"
 #include <iostream>
 #include <iomanip>
 
