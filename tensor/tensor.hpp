@@ -4,6 +4,7 @@
 #include <concepts>
 #include <cstddef>
 #include <type_traits>
+#include <limits>
 
 #include <array>
 #include <memory>
@@ -14,17 +15,17 @@
 namespace tensor::detail {
 
 template <std::floating_point T, std::size_t... Dimensions>
-struct nested_array { 
+struct NestedArray { 
     using type = T; 
 };
 
 template <std::floating_point T, std::size_t D, std::size_t... Dimensions>
-struct nested_array<T, D, Dimensions...> {
-    using type = typename nested_array<T, Dimensions...>::type[D];
+struct NestedArray<T, D, Dimensions...> {
+    using type = typename NestedArray<T, Dimensions...>::type[D];
 };
 
 template <std::floating_point T, std::size_t... Dimensions>
-using nested_array_t = typename nested_array<T, Dimensions...>::type;
+using nested_array_t = typename NestedArray<T, Dimensions...>::type;
 
 template <std::floating_point T, typename A>
 constexpr void flatten(const A& a, T*& out) {
@@ -51,7 +52,7 @@ public:
 private:
     std::unique_ptr<T[]> values = std::make_unique<T[]>(size);
 
-    void emptyAccessCheck() const {
+    void checkNotEmpty() const {
         if (empty()) {
             throw std::logic_error("can't access empty Tensor");
         }
@@ -136,15 +137,15 @@ public:
     }
 
     static Tensor ones() {
-        return full(1.0);
+        return full(T{1});
     }
 
-    static Tensor zeroes() {
-        return full(0.0);
+    static Tensor zeros() {
+        return full(T{0});
     }
 
     T& operator[](decltype(Dimensions)... indices) {
-        emptyAccessCheck();
+        checkNotEmpty();
 
         std::size_t offset = calculateOffset(indices...);
 
@@ -152,7 +153,7 @@ public:
     }
 
     const T& operator[](decltype(Dimensions)... indices) const {
-        emptyAccessCheck();
+        checkNotEmpty();
 
         std::size_t offset = calculateOffset(indices...);
 
@@ -160,7 +161,7 @@ public:
     }
 
     T max() const {
-        emptyAccessCheck();
+        checkNotEmpty();
 
         T maxValue = -std::numeric_limits<T>::infinity();
 
@@ -172,7 +173,7 @@ public:
     }
 
     T min() const {
-        emptyAccessCheck();
+        checkNotEmpty();
 
         T minValue = std::numeric_limits<T>::infinity();
 

@@ -3,7 +3,6 @@
 
 #include "tensor.hpp"
 
-#include <limits>
 #include <cmath>
 #include <string>
 #include <iomanip>
@@ -13,14 +12,14 @@
 
 namespace tensor::detail {
 
-static constexpr std::size_t PRINT_SUMMARY_THRESHOLD = 1000;
-static constexpr std::size_t PRINT_SUMMARY_EDGEITEMS = 3;
-static constexpr std::size_t PRINT_DEFAULT_PRECISION = 6;
-static constexpr bool SUPPRESS_SCIENTIFIC = false;
+inline constexpr std::size_t printSummaryThreshold = 1000;
+inline constexpr std::size_t printSummaryEdgeItems = 3;
+inline constexpr std::size_t printDefaultPrecision = 6;
+inline constexpr bool suppressScientific = false;
 
 struct PrintFormat {
     bool useScientific = false;
-    std::size_t precision = PRINT_DEFAULT_PRECISION;
+    std::size_t precision = printDefaultPrecision;
     bool trim = true;
 
     std::size_t integerWidth = 0;
@@ -55,7 +54,7 @@ std::string formatElement(T value, const PrintFormat& format) {
 }
 
 template<std::floating_point T>
-void getPrintElementWidths(const T* values, std::size_t size, PrintFormat& format) {
+void computeElementWidths(const T* values, std::size_t size, PrintFormat& format) {
 
     std::size_t specialWidth = 0;
 
@@ -90,28 +89,28 @@ void getPrintElementWidths(const T* values, std::size_t size, PrintFormat& forma
     }
 }
 
-template<std::floating_point T, std::size_t rank>
-void printVerbose(std::ostream& os, const T* values, std::array<std::size_t, rank> shape, std::size_t size, const PrintFormat& format, std::size_t axis, std::size_t offset, std::size_t indent) {
+template<std::floating_point T, std::size_t Rank>
+void printVerbose(std::ostream& os, const T* values, std::array<std::size_t, Rank> shape, std::size_t size, const PrintFormat& format, std::size_t axis, std::size_t offset, std::size_t indent) {
 
-    if (rank == 0) {
+    if (Rank == 0) {
         os << formatElement(values[0], format);
         return;
     }
 
     os << '[';
 
-    bool shouldSummarize = size > PRINT_SUMMARY_THRESHOLD;
+    bool shouldSummarize = size > printSummaryThreshold;
 
-    if (axis == rank - 1) {
+    if (axis == Rank - 1) {
         for (std::size_t i = 0; i < shape[axis]; ++i) {
             if (i > 0) {
                 os << ' ';
             }
 
-            if (shouldSummarize && shape[axis] > PRINT_SUMMARY_EDGEITEMS * 2 && i == PRINT_SUMMARY_EDGEITEMS) {
+            if (shouldSummarize && shape[axis] > printSummaryEdgeItems * 2 && i == printSummaryEdgeItems) {
                 os << "...";
 
-                i = shape[axis] - PRINT_SUMMARY_EDGEITEMS - 1;
+                i = shape[axis] - printSummaryEdgeItems - 1;
                 continue;
             }
 
@@ -135,31 +134,31 @@ void printVerbose(std::ostream& os, const T* values, std::array<std::size_t, ran
     } else {
         std::size_t stride = 1;
 
-        for (std::size_t i = axis + 1; i < rank; ++i) {
+        for (std::size_t i = axis + 1; i < Rank; ++i) {
             stride *= shape[i];
         }
 
         for (std::size_t i = 0; i < shape[axis]; ++i) {
             if (i > 0) {
-                os << std::string(rank - indent - 1, '\n') << std::string(indent + 1, ' ');
+                os << std::string(Rank - indent - 1, '\n') << std::string(indent + 1, ' ');
             }
 
-            if (shouldSummarize && shape[axis] > PRINT_SUMMARY_EDGEITEMS * 2 && i == PRINT_SUMMARY_EDGEITEMS) {
+            if (shouldSummarize && shape[axis] > printSummaryEdgeItems * 2 && i == printSummaryEdgeItems) {
                 os << "...";
 
-                i = shape[axis] - PRINT_SUMMARY_EDGEITEMS - 1;
+                i = shape[axis] - printSummaryEdgeItems - 1;
                 continue;
             }
 
-            printVerbose<T, rank>(os, values, shape, size, format, axis + 1, offset + i * stride, indent + 1);
+            printVerbose<T, Rank>(os, values, shape, size, format, axis + 1, offset + i * stride, indent + 1);
         }
     }
 
     os << ']';
 }
 
-template<std::floating_point T, std::size_t rank>
-void print(std::ostream& os, const T* values, std::array<std::size_t, rank> shape, std::size_t size) {
+template<std::floating_point T, std::size_t Rank>
+void print(std::ostream& os, const T* values, std::array<std::size_t, Rank> shape, std::size_t size) {
     T minAbs = std::numeric_limits<T>::infinity();
     T maxAbs = 0.0;
 
@@ -172,10 +171,10 @@ void print(std::ostream& os, const T* values, std::array<std::size_t, rank> shap
         }
     }
 
-    bool useScientific = maxAbs > 0.0 && (maxAbs >= 1e8 || (!SUPPRESS_SCIENTIFIC && (minAbs < 1e-4 || maxAbs / minAbs > 1000)));
+    bool useScientific = maxAbs > 0.0 && (maxAbs >= 1e8 || (!suppressScientific && (minAbs < 1e-4 || maxAbs / minAbs > 1000)));
 
     std::streamsize streamPrecision = os.precision();
-    std::size_t precision = { streamPrecision >= 0 ? static_cast<std::size_t>(streamPrecision) : PRINT_DEFAULT_PRECISION };
+    std::size_t precision = { streamPrecision >= 0 ? static_cast<std::size_t>(streamPrecision) : printDefaultPrecision };
 
     std::ios_base::fmtflags ff = os.flags() & std::ios::floatfield;
     bool trim = true;
@@ -190,9 +189,9 @@ void print(std::ostream& os, const T* values, std::array<std::size_t, rank> shap
 
     PrintFormat format{ useScientific, precision, trim };
 
-    getPrintElementWidths(values, size, format);
+    computeElementWidths(values, size, format);
 
-    printVerbose<T, rank>(os, values, shape, size, format, 0, 0, 0);
+    printVerbose<T, Rank>(os, values, shape, size, format, 0, 0, 0);
 }
 
 }
@@ -200,17 +199,17 @@ void print(std::ostream& os, const T* values, std::array<std::size_t, rank> shap
 namespace tensor {
 
 template<std::floating_point T, std::size_t... Dimensions>
-std::ostream& operator<<(std::ostream& os, const tensor::Tensor<T, Dimensions...>& tensor) {
-    using tensor_t = tensor::Tensor<T, Dimensions...>;
+std::ostream& operator<<(std::ostream& os, const Tensor<T, Dimensions...>& tensor) {
+    using TensorType = Tensor<T, Dimensions...>;
 
     os << "Tensor<";
 
-    for (std::size_t i = 0; i < tensor_t::rank; ++i) {
+    for (std::size_t i = 0; i < TensorType::rank; ++i) {
         if (i > 0) {
             os << ", ";
         }
 
-        os << tensor_t::shape[i];
+        os << TensorType::shape[i];
     }
 
     os << ">";
@@ -219,7 +218,7 @@ std::ostream& operator<<(std::ostream& os, const tensor::Tensor<T, Dimensions...
         os << " (empty)";
     } else {
         os << "\n";
-        tensor::detail::print<T, tensor_t::rank>(os, tensor.data(), tensor_t::shape, tensor_t::size);
+        detail::print<T, TensorType::rank>(os, tensor.data(), TensorType::shape, TensorType::size);
     }
 
     return os;
