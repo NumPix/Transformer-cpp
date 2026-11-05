@@ -52,9 +52,9 @@ public:
 private:
     std::unique_ptr<T[]> values = std::make_unique<T[]>(size);
 
-    void checkNotEmpty() const {
+    void checkNotEmpty(const std::string& message) const {
         if (empty()) {
-            throw std::logic_error("can't access empty Tensor");
+            throw std::logic_error(message);
         }
     }
 
@@ -145,7 +145,7 @@ public:
     }
 
     T& operator[](decltype(Dimensions)... indices) {
-        checkNotEmpty();
+        checkNotEmpty("can't access empty Tensor");
 
         std::size_t offset = calculateOffset(indices...);
 
@@ -153,7 +153,7 @@ public:
     }
 
     const T& operator[](decltype(Dimensions)... indices) const {
-        checkNotEmpty();
+        checkNotEmpty("can't access empty Tensor");
 
         std::size_t offset = calculateOffset(indices...);
 
@@ -161,7 +161,7 @@ public:
     }
 
     T max() const {
-        checkNotEmpty();
+        checkNotEmpty("can't access empty Tensor");
 
         T maxValue = -std::numeric_limits<T>::infinity();
 
@@ -173,7 +173,7 @@ public:
     }
 
     T min() const {
-        checkNotEmpty();
+        checkNotEmpty("can't access empty Tensor");
 
         T minValue = std::numeric_limits<T>::infinity();
 
@@ -183,6 +183,7 @@ public:
 
         return minValue;
     }
+
 };
 
 }

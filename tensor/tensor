@@ -1,1 +1,2 @@
 #include "detail/tensor.hpp"
+#include "detail/tensor_math.hpp"

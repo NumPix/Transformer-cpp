@@ -213,7 +213,7 @@ void print(std::ostream& os, const T* values, std::array<std::size_t, Rank> shap
 namespace tensor {
 
 template<std::floating_point T, std::size_t... Dimensions>
-std::ostream& operator<<(std::ostream& os, const Tensor<T, Dimensions...>& tensor) {
+std::ostream& operator<<(std::ostream& os, const Tensor<T, Dimensions...>& t) {
     using TensorType = Tensor<T, Dimensions...>;
 
     os << "Tensor<" << detail::typeName<T>();
@@ -224,11 +224,11 @@ std::ostream& operator<<(std::ostream& os, const Tensor<T, Dimensions...>& tenso
 
     os << ">";
 
-    if (tensor.empty()) {
+    if (t.empty()) {
         os << " (empty)";
     } else {
         os << "\n";
-        detail::print<T, TensorType::rank>(os, tensor.data(), TensorType::shape, TensorType::size);
+        detail::print<T, TensorType::rank>(os, t.data(), TensorType::shape, TensorType::size);
     }
 
     return os;
