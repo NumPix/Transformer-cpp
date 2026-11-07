@@ -4,10 +4,14 @@
 #include <iomanip>
 
 int main(int argc, char** argv) {
-    auto T = tensor::Tensor<float, 4096, 4096>::full(2);
-    T = tensor::exp(T);
+    auto T1 = tensor::Tensor<float, 2, 2>::full(2);
+    auto T2 = tensor::Tensor<float, 2, 2>::full(4);
 
-    std::cout << std::scientific << std::setprecision(8) << T;
+    T1 /= T2;
+
+    T1[1, 1] += 2;
+
+    std::cout << T1 << '\n' << tensor::max(T1);
 
     return 0;
 }

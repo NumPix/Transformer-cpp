@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <type_traits>
 #include <limits>
-
 #include <array>
 #include <memory>
 #include <algorithm>
@@ -38,6 +37,13 @@ constexpr void flatten(const A& a, T*& out) {
     }
 }
 
+template <class... Tensors>
+void checkNotEmpty(const char* message, const Tensors&... tensors) {
+    if ((tensors.empty() || ...)) {
+        throw std::logic_error(message);
+    }
+}
+
 }
 
 namespace tensor {
@@ -51,12 +57,6 @@ public:
 
 private:
     std::unique_ptr<T[]> values = std::make_unique<T[]>(size);
-
-    void checkNotEmpty(const std::string& message) const {
-        if (empty()) {
-            throw std::logic_error(message);
-        }
-    }
 
     static std::size_t calculateOffset(decltype(Dimensions)... indices) {
         const std::array<std::size_t, rank> indicesArray = { indices... };
@@ -145,7 +145,7 @@ public:
     }
 
     T& operator[](decltype(Dimensions)... indices) {
-        checkNotEmpty("can't access empty Tensor");
+        detail::checkNotEmpty("can't access empty Tensor", *this);
 
         std::size_t offset = calculateOffset(indices...);
 
@@ -153,37 +153,20 @@ public:
     }
 
     const T& operator[](decltype(Dimensions)... indices) const {
-        checkNotEmpty("can't access empty Tensor");
+        detail::checkNotEmpty("can't access empty Tensor", *this);
 
         std::size_t offset = calculateOffset(indices...);
 
         return values[offset];
     }
 
-    T max() const {
-        checkNotEmpty("can't access empty Tensor");
-
-        T maxValue = -std::numeric_limits<T>::infinity();
-
-        for (std::size_t i = 0; i < size; ++i) {
-            maxValue = std::max(maxValue, values[i]);
+    friend bool operator==(const Tensor& t1, const Tensor& t2) {
+        if (t1.empty() || t2.empty()) {
+            return t1.empty() && t2.empty();
         }
 
-        return maxValue;
+        return std::equal(t1.data(), t1.data() + size, t2.data());
     }
-
-    T min() const {
-        checkNotEmpty("can't access empty Tensor");
-
-        T minValue = std::numeric_limits<T>::infinity();
-
-        for (std::size_t i = 0; i < size; ++i) {
-            minValue = std::min(minValue, values[i]);
-        }
-
-        return minValue;
-    }
-
 };
 
 }
